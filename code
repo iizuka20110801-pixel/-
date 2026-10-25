@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>同人ビューア</title>
+<style>
+  :root{--bg:#0e1014;--bg2:#161a21;--bg3:#1e242e;--fg:#e7ecf3;--dim:#8d97a6;--acc:#4a9eff;--acc2:#2f6fd0;--warn:#ffb020;--line:#28303c}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+  a{color:var(--acc);text-decoration:none}
+  header{position:sticky;top:0;z-index:50;display:flex;gap:8px;align-items:center;padding:8px 10px;background:rgba(14,16,20,.94);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .logo{font-weight:700;font-size:15px;color:var(--fg);white-space:nowrap}
+  .sf{display:flex;gap:6px;flex:1;min-width:190px}
+  .sf input{flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);font-size:13px}
+  .sf input:focus{outline:none;border-color:var(--acc)}
+  .sf button{padding:7px 12px;border-radius:8px;border:0;background:var(--acc);color:#04121f;font-weight:700;cursor:pointer}
+  nav{display:flex;gap:6px}
+  nav a{padding:6px 9px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);font-size:12px;color:var(--fg)}
+  main{padding:12px;max-width:1400px;margin:0 auto}
+  .h1{font-size:15px;font-weight:700;margin:4px 0 10px}
+  .sub{color:var(--dim);font-size:12px;margin-bottom:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);color:var(--fg);cursor:pointer;font-size:13px}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:700}
+  .btn.ghost{background:transparent}
+  .btn.on{background:var(--acc2);border-color:var(--acc);color:#fff}
+  .card{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+  input.txt,textarea.txt{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:13px}
+  textarea.txt{font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.45;height:240px;resize:vertical}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .item{background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;position:relative}
+  .item:hover{border-color:var(--acc)}
+  .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--bg3);display:block}
+  .item .t{padding:7px 8px;font-size:12px;font-weight:600;line-height:1.35}
+  .item .c{padding:0 8px 8px;font-size:11px;color:var(--dim)}
+  .star{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.72);color:var(--warn);font-size:11px;padding:2px 6px;border-radius:6px;font-weight:700}
+  .badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.72);color:#9fd0ff;font-size:10px;padding:2px 6px;border-radius:6px}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .pager{display:flex;gap:6px;justify-content:center;margin:14px 0;flex-wrap:wrap}
+  .pager .btn{min-width:38px;text-align:center}
+  .strip img{width:100%;display:block;margin:0 auto 4px;background:var(--bg3)}
+  .paged img{width:100%;display:block;background:var(--bg3)}
+  .toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+  .notice{padding:10px;border-radius:8px;background:#2a2013;border:1px solid #5a4215;color:#ffd08a;font-size:12px;margin-bottom:10px}
+  .notice.bad{background:#2a1414;border-color:#5a1c1c;color:#ff9f9f}
+  .empty{color:var(--dim);text-align:center;padding:30px 10px;font-size:13px}
+  .hist{display:flex;gap:10px;align-items:center;padding:8px;border-bottom:1px solid var(--line);cursor:pointer}
+  .hist img{width:42px;height:56px;object-fit:cover;border-radius:6px;background:var(--bg3)}
+  .k{font-size:11px;color:var(--dim);letter-spacing:.04em;margin-bottom:4px}
+  .sug{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .sug a{font-size:12px;padding:5px 9px;border-radius:20px;background:var(--bg2);border:1px solid var(--line);color:var(--fg)}
+  .status{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--dim)}
+  .status.ok{color:#7ce39a;border-color:#2c6b40}
+  .status.ng{color:#ff9f9f;border-color:#6b2c2c}
+  code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#/">同人ビューア</a>
+  <div class="sf"><input id="q" placeholder="タイトル・キーワード・作者で検索"><button id="sbtn">検索</button></div>
+  <nav><a href="#/favs">★</a><a href="#/hist">履歴</a><a href="#/set">⚙</a></nav>
+</header>
+<main id="view"></main>
+
+<script>
+const SITE = 'https://ddd-smart.net/';
+const CDN  = 'https://cdn.ddd-smart.net/';
+const PUBLIC_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+  'https://corsproxy.io/?url='
+];
+const SORTS = ['新着順','オススメ度順','PV順','お気に入り数順'];
+
+const S = {
+  get(k, d){ try{ const v = localStorage.getItem('dv:'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('dv:'+k, JSON.stringify(v)); }catch(e){} }
+};
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad3 = n => String(n).padStart(3, '0');
+const view = document.getElementById('view');
+const qbox = document.getElementById('q');
+
+/* Worker URL の正規化（https:// 補完・末尾スラッシュ・?url= 除去） */
+function normWorker(raw){
+  let w = String(raw || '').trim();
+  if(!w) return '';
+  if(!/^https?:\/\//i.test(w)) w = 'https://' + w;
+  w = w.replace(/[?&]url=.*$/, '').replace(/[?&]$/, '');
+  if(!w.endsWith('/')) w += '/';
+  return w;
+}
+const workerUrl = () => normWorker(S.get('worker', ''));
+const withUrl = u => { const w = workerUrl(); return w ? w + '?url=' + encodeURIComponent(u) : u; };
+const srcOf = withUrl;
+
+async function px(url){
+  const list = PUBLIC_PROXIES.map(p => p + encodeURIComponent(url));
+  if(workerUrl()) list.unshift(withUrl(url));
+  const one = async base => {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), 9000);
+    try{
+      const r = await fetch(base, { signal: c.signal, cache: 'no-store' });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const x = await r.text();
+      if(!x || x.length < 300) throw new Error('short');
+      return x;
+    } finally { clearTimeout(t); }
+  };
+  return new Promise((res, rej) => {
+    let done = false, n = 0, last;
+    list.forEach(b => one(b).then(t => { if(!done){ done = true; res(t); } })
+      .catch(e => { last = e; if(++n === list.length && !done) rej(last); }));
+  });
+}
+
+/* ---------- 内蔵サンプル ---------- */
+const DEMO_ITEMS = [
+ {g:'20261024',dir:'012',title:'ノアママ♥催眠バブ体験',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20261024',dir:'003',title:'記憶と算術のSecret Night Party',cat:'ブルーアーカイブ',star:'★×10'},
+ {g:'20261019',dir:'022',title:'デカおっぱい好きがノアに知られた先生',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20261015',dir:'053',title:'ブ〇アカ：生塩ノアヘイロー改造ビッチ化',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20261012',dir:'007',title:'Twinkle Twins Secret',cat:'SOUND VOLTEX',star:'★×8'},
+ {g:'20261003',dir:'053',title:'ノアと年明けえっち♥',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20260923',dir:'052',title:'パジャマノアの手コキ♥',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20260917',dir:'013',title:'ユウカ&ノア 催眠NTR',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20260908',dir:'051',title:'ノアと正常位で汗だくイチャラブHする♡',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20260823',dir:'035',title:'生塩ノアの甘マゾ騎乗位 全16枚',cat:'ブルーアーカイブ',star:'★×8'},
+ {g:'20260811',dir:'046',title:'生塩ノア 足裏嗅がせ セックス 台詞付きCG集',cat:'ブルーアーカイブ',star:'★×8'},
+ {ext:'https://d-hentai.net/ja/comics/80035',title:'オタク友達とのセックスは最高に気持ちいい',cat:'オリジナル',star:'★×10'}
+].map(o => Object.assign({ thumb: o.g ? CDN + o.g + '/' + o.dir + '/thumbnail.jpg' : '' }, o));
+const DEMO = { total: 572, items: DEMO_ITEMS, work: { g:'20261024', dir:'003', title:'記憶と算術のSecret Night Party', total:18 } };
+
+/* ---------- パーサ ---------- */
+function parseList(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html'), out = [];
+  doc.querySelectorAll('ul.package-list > li').forEach(li => {
+    let g = null, dir = null, ext = null;
+    const did = li.querySelector('[data-comic-did]');
+    if(did){
+      const m = /^(\d+)-(\d+)$/.exec(did.getAttribute('data-comic-did') || '');
+      if(m){ g = m[1]; dir = m[2]; }
+    }
+    const a = li.querySelector('a[href*="show-m.php"],a[href*="d-hentai.net"]');
+    if(!g && a){
+      const h = a.getAttribute('href') || '';
+      const m = /show-m\.php\?g=([^&]+)&(?:amp;)?dir=([^&]+)/.exec(h);
+      if(m){ g = m[1]; dir = m[2]; }
+      else if(/d-hentai\.net/.test(h)) ext = h;
+    }
+    if(!g && !ext) return;
+    const hh = li.querySelector('h2,h3'), st = li.querySelector('.recommend-star'),
+          an = li.querySelector('.package-list-anime'), im = li.querySelector('img');
+    out.push({ g, dir, ext, title: hh ? hh.textContent.trim() : '', cat: an ? an.textContent.trim() : '',
+      star: st ? st.textContent.trim() : '', thumb: im ? (im.getAttribute('src') || '') : '' });
+  });
+  const t = doc.querySelector('.result span');
+  const total = t ? (parseInt(t.textContent, 10) || 0) : 0;
+  let lastPage = 0;
+  doc.querySelectorAll('.paging a,.page_menu a').forEach(a => {
+    const m = /[?&]page=(\d+)/.exec(a.getAttribute('href') || '');
+    if(m) lastPage = Math.max(lastPage, +m[1]);
+    const n = parseInt(a.textContent.trim(), 10);
+    if(n > lastPage) lastPage = n;
+  });
+  return { items: out, total, lastPage };
+}
+
+/* ---------- メタ ---------- */
+const imgUrl = (g, dir, i) => CDN + g + '/' + dir + '/' + pad3(i) + '.jpg';
+const thumbUrl = (g, dir) => CDN + g + '/' + dir + '/thumbnail.jpg';
+const probe = u => new Promise(r => { const i = new Image(); i.onload = () => r(true); i.onerror = () => r(false); i.src = srcOf(u); });
+
+async function loadWork(g, dir){
+  const cache = S.get('meta', {}), key = g + '/' + dir;
+  if(cache[key] && cache[key].total) return cache[key];
+  const meta = { title:'', total:0, thumb: thumbUrl(g, dir) };
+  try{
+    const html = await px(SITE + 'doujinshi3/show-m.php?g=' + g + '&dir=' + dir + '&page=0');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const h = doc.querySelector('h1,.detail-box h2,.comic-title');
+    if(h) meta.title = h.textContent.trim().replace(/\s+/g, ' ').slice(0, 120);
+    if(!meta.title) meta.title = (doc.title || '').replace(/\s*[|｜].*$/, '').trim().slice(0, 120);
+    const m = /(\d+)\s*\/\s*(\d+)/.exec(doc.body ? doc.body.textContent : '');
+    if(m) meta.total = Math.min(parseInt(m[2], 10) || 0, 500);
+    const nums = [...html.matchAll(/cdn\.ddd-smart\.net\/[^\/"']+\/[^\/"']+\/(\d{3})\.jpg/g)].map(x => +x[1]);
+    if(nums.length) meta.total = Math.max(meta.total, Math.min(Math.max(...nums), 500));
+  }catch(e){}
+  if(!meta.total) meta.total = await probePages(g, dir);
+  cache[key] = meta; S.set('meta', cache);
+  return meta;
+}
+async function probePages(g, dir){
+  if(!(await probe(imgUrl(g, dir, 1)))) return 0;
+  let hi = 1;
+  while(hi < 400 && await probe(imgUrl(g, dir, hi + 10))) hi += 10;
+  let n = hi;
+  for(let i = hi + 1; i <= Math.min(hi + 10, 400); i++){ if(await probe(imgUrl(g, dir, i))) n = i; else break; }
+  return n;
+}
+function ph(l){
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#1e242e"/><text x="150" y="205" fill="#5c6675" font-size="15" font-family="sans-serif" text-anchor="middle">' + l + '</text></svg>');
+}
+function bindImg(im, label){
+  im.referrerPolicy = 'no-referrer';
+  im.loading = 'lazy';
+  im.addEventListener('error', () => {
+    if(im.dataset.retried) return;
+    im.dataset.retried = '1';
+    im.src = ph(label || 'no image');
+  });
+}
+
+/* ---------- 保存 ---------- */
+function addHist(o){
+  let h = S.get('hist', []);
+  h = h.filter(x => !(x.g === o.g && x.dir === o.dir));
+  h.unshift(o);
+  S.set('hist', h.slice(0, 60));
+}
+const isFav = (g, dir) => S.get('favs', []).some(x => x.g === g && x.dir === dir);
+function toggleFav(o){
+  let f = S.get('favs', []);
+  if(f.some(x => x.g === o.g && x.dir === o.dir)) f = f.filter(x => !(x.g === o.g && x.dir === o.dir));
+  else f.unshift(o);
+  S.set('favs', f.slice(0, 300));
+  return isFav(o.g, o.dir);
+}
+
+/* ---------- 描画 ---------- */
+function itemHtml(it){
+  const star = it.star ? '<span class="star">' + esc(it.star) + '</span>' : '';
+  const badge = it.ext ? '<span class="badge">別館</span>' : '';
+  const th = it.thumb
+    ? '<img class="thumb" src="' + esc(srcOf(it.thumb)) + '" data-src="' + esc(it.thumb) + '" alt="">'
+    : '<div class="thumb"></div>';
+  const go = it.ext ? it.ext : ('#/w/' + it.g + '/' + it.dir);
+  return '<div class="item" data-go="' + esc(go) + '" data-t="' + esc(it.title || '') + '" data-th="' + esc(it.thumb || '') + '">' +
+    star + badge + th + '<div class="t">' + esc(it.title || '(無題)') + '</div><div class="c">' + esc(it.cat) + '</div></div>';
+}
+function wireItems(){
+  view.querySelectorAll('img.thumb').forEach(i => bindImg(i, 'no image'));
+  view.querySelectorAll('.item').forEach(el => el.addEventListener('click', () => {
+    const go = el.dataset.go;
+    if(/^https?:/.test(go)){ window.open(go, '_blank', 'noopener'); return; }
+    const m = /^#\/w\/([^\/]+)\/([^\/]+)/.exec(go);
+    if(m) sessionStorage.setItem('dv:last', JSON.stringify({ g:m[1], dir:m[2], title: el.dataset.t, thumb: el.dataset.th }));
+    location.hash = go.slice(1);
+  }));
+}
+function pagerHtml(page, last, base){
+  if(last <= 1) return '';
+  const o = [];
+  if(page > 1) o.push('<a class="btn" href="#' + base + '/' + (page - 1) + '">前へ</a>');
+  for(let i = Math.max(1, page - 3); i <= Math.min(last, page + 3); i++)
+    o.push('<a class="btn' + (i === page ? ' on' : '') + '" href="#' + base + '/' + i + '">' + i + '</a>');
+  if(page < last) o.push('<a class="btn" href="#' + base + '/' + (page + 1) + '">次へ</a>');
+  return '<div class="pager">' + o.join('') + '</div>';
+}
+const tabsHtml = (sort, prefix) => '<div class="tabs">' + SORTS.map((n, i) =>
+  '<a class="btn' + (i + 1 === sort ? ' on' : '') + '" href="#' + prefix + '/1/' + (i + 1) + '">' + n + '</a>').join('') + '</div>';
+
+/* ---------- 検索 ---------- */
+async function renderSearch(q, page, sort){
+  sort = sort || 1; page = page || 1;
+  qbox.value = q;
+  const enc = encodeURIComponent(q);
+  view.innerHTML = '<div class="sub">「' + esc(q) + '」を検索中…</div>';
+  let url = SITE + 'search.php?keyword=' + enc + '&s=' + encodeURIComponent('検索');
+  if(page > 1) url += '&page=' + page;
+  if(sort > 1) url += '&sort_key=' + sort;
+  let data = null, off = false;
+  try{ data = parseList(await px(url)); }catch(e){ off = true; }
+  if(off || !data || !data.items.length){ data = { items: DEMO.items, total: DEMO.total, lastPage: 1 }; off = true; }
+  view.innerHTML =
+    (off ? '<div class="notice">取得できないため<b>内蔵サンプル</b>を表示中。⚙でWorker URLを設定してください。</div>' : '') +
+    '<div class="h1">「' + esc(q) + '」の検索結果</div>' +
+    (data.total ? '<div class="sub">' + data.total.toLocaleString() + '件中 ' + ((page - 1) * 30 + 1) + '〜' + Math.min(page * 30, data.total) + '件</div>' : '') +
+    tabsHtml(sort, '/s/' + enc) +
+    '<div class="grid">' + data.items.map(itemHtml).join('') + '</div>' +
+    (off ? '' : pagerHtml(page, data.lastPage, '/s/' + enc + '/' + page + '/' + sort));
+  wireItems();
+}
+
+/* ---------- 分類 ---------- */
+const TYPES = { 1:'原作', 2:'キャラ', 3:'サークル', 4:'タグ' };
+async function renderBrowse(type, kw, page, sort){
+  sort = sort || 1; page = page || 1;
+  const enc = encodeURIComponent(kw);
+  view.innerHTML = '<div class="sub">読み込み中…</div>';
+  let url = SITE + 'list2.php?type=' + type + '&keyword=' + enc;
+  if(page > 1) url += '&page=' + page;
+  if(sort > 1) url += '&sort_key=' + sort;
+  let data = null, off = false;
+  try{ data = parseList(await px(url)); }catch(e){ off = true; }
+  if(off || !data || !data.items.length){ data = { items: DEMO.items, total: DEMO.total, lastPage: 1 }; off = true; }
+  view.innerHTML =
+    (off ? '<div class="notice">サンプル表示中</div>' : '') +
+    '<div class="h1">' + (TYPES[type] || '') + '：' + esc(kw) + '</div>' +
+    (data.total ? '<div class="sub">' + data.total.toLocaleString() + '件</div>' : '') +
+    tabsHtml(sort, '/b/' + type + '/' + enc) +
+    '<div class="grid">' + data.items.map(itemHtml).join('') + '</div>' +
+    (off ? '' : pagerHtml(page, data.lastPage, '/b/' + type + '/' + enc + '/' + page + '/' + sort));
+  wireItems();
+}
+
+/* ---------- ビューア ---------- */
+async function renderReader(g, dir){
+  const key = g + '/' + dir, prog = S.get('prog', {});
+  let mode = S.get('mode', 'strip');
+  let hint = {};
+  try{ hint = JSON.parse(sessionStorage.getItem('dv:last') || '{}'); }catch(e){}
+  if(hint.g !== g || hint.dir !== dir) hint = {};
+  view.innerHTML = '<div class="sub">読み込み中…</div>';
+  const meta = await loadWork(g, dir);
+  if(!meta.total){
+    view.innerHTML = '<div class="notice bad">ページを検出できませんでした。</div>' +
+      '<div class="row"><a class="btn" href="' + SITE + 'doujinshi3/show-m.php?g=' + g + '&dir=' + dir + '" target="_blank" rel="noopener">サイトで開く</a>' +
+      '<a class="btn ghost" href="#/">戻る</a></div>';
+    return;
+  }
+  const title = hint.title || meta.title || (g + '/' + dir);
+  if(!meta.title && hint.title) meta.title = hint.title;
+  if(hint.thumb && !meta.thumb) meta.thumb = hint.thumb;
+  addHist({ g, dir, title, thumb: meta.thumb });
+  let cur = Math.min(Math.max(prog[key] || 1, 1), meta.total), fav = isFav(g, dir);
+
+  const draw = () => {
+    view.innerHTML =
+      '<div class="h1">' + esc(title) + '</div>' +
+      '<div class="sub">' + esc(g) + '/' + esc(dir) + ' ・ 全' + meta.total + 'ページ</div>' +
+      '<div class="toolbar">' +
+      '<button class="btn' + (mode === 'strip' ? ' on' : '') + '" data-mode="strip">縦スクロール</button>' +
+      '<button class="btn' + (mode === 'page' ? ' on' : '') + '" data-mode="page">1ページ</button>' +
+      '<button class="btn' + (fav ? ' on' : '') + '" id="fav">' + (fav ? '★ 登録済み' : '☆ お気に入り') + '</button>' +
+      '<a class="btn" href="' + SITE + 'doujinshi3/show-m.php?g=' + g + '&dir=' + dir + '" target="_blank" rel="noopener">元ページ</a>' +
+      '<a class="btn ghost" href="#/">戻る</a></div>' +
+      '<div class="' + (mode === 'strip' ? 'strip' : 'paged') + '" id="body"></div>' +
+      (mode === 'page' ? '<div class="pager"><button class="btn" id="prev">前</button>' +
+        '<span class="btn ghost" id="pos">' + cur + ' / ' + meta.total + '</span><button class="btn" id="next">次</button></div>' : '');
+    const body = document.getElementById('body');
+    const mk = i => {
+      const im = document.createElement('img');
+      im.dataset.src = imgUrl(g, dir, i);
+      im.src = srcOf(im.dataset.src);
+      im.dataset.page = i;
+      bindImg(im, 'p.' + i);
+      return im;
+    };
+    if(mode === 'strip'){
+      const f = document.createDocumentFragment();
+      for(let i = 1; i <= meta.total; i++) f.appendChild(mk(i));
+      body.appendChild(f);
+      const t = body.querySelector('img[data-page="' + cur + '"]');
+      if(t) t.scrollIntoView({ block: 'start' });
+    }else{
+      body.appendChild(mk(cur));
+      if(cur + 1 <= meta.total) new Image().src = srcOf(imgUrl(g, dir, cur + 1));
+    }
+    const save = v => { const p = S.get('prog', {}); p[key] = v; S.set('prog', p); };
+    view.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+      mode = b.dataset.mode; S.set('mode', mode); draw();
+    }));
+    const fb = document.getElementById('fav');
+    fb.addEventListener('click', () => {
+      fav = toggleFav({ g, dir, title, thumb: meta.thumb });
+      fb.textContent = fav ? '★ 登録済み' : '☆ お気に入り';
+      fb.classList.toggle('on', fav);
+    });
+    if(mode === 'page'){
+      save(cur);
+      const go = v => {
+        cur = Math.min(Math.max(v, 1), meta.total);
+        save(cur);
+        const im = body.querySelector('img');
+        im.dataset.src = imgUrl(g, dir, cur);
+        delete im.dataset.retried;
+        im.src = srcOf(im.dataset.src);
+        document.getElementById('pos').textContent = cur + ' / ' + meta.total;
+        if(cur + 1 <= meta.total) new Image().src = srcOf(imgUrl(g, dir, cur + 1));
+      };
+      document.getElementById('prev').addEventListener('click', () => go(cur - 1));
+      document.getElementById('next').addEventListener('click', () => go(cur + 1));
+    }
+  };
+  draw();
+}
+
+/* ---------- 一覧 ---------- */
+function renderList(title, arr, msg){
+  if(!arr.length){ view.innerHTML = '<div class="h1">' + title + '</div><div class="empty">' + msg + '</div>'; return; }
+  view.innerHTML = '<div class="h1">' + title + '</div><div class="grid">' + arr.map(itemHtml).join('') + '</div>';
+  wireItems();
+}
+
+/* ---------- ホーム ---------- */
+function renderHome(){
+  qbox.value = '';
+  const hist = S.get('hist', []);
+  const sug = ['ノア','ブルーアーカイブ','NTR','巨乳','催眠','東方Project'];
+  view.innerHTML =
+    '<div class="h1">同人すまーとの作品を読む</div>' +
+    '<div class="card"><div class="k">作品URL / 記号</div>' +
+    '<input class="txt" id="urlin" placeholder="https://ddd-smart.net/doujinshi3/show-m.php?g=20261024&amp;dir=003 もしくは 20261024/003">' +
+    '<div class="row" style="margin-top:8px"><button class="btn primary" id="open">開く</button>' +
+    '<button class="btn" id="demo">デモ作品</button></div>' +
+    '<div class="sug">' + sug.map(s => '<a href="#/s/' + encodeURIComponent(s) + '/1/1">' + esc(s) + '</a>').join('') + '</div></div>' +
+    '<div class="card"><div class="k">検索について</div><div class="sub" style="margin:0">' +
+    'サイトのフリーワード検索にそのまま渡ります。タイトル・キャラ名・作者名・サークル名でヒットし、空白で絞り込めます。</div></div>' +
+    (hist.length ? '<div class="h1">最近読んだ作品</div>' + hist.slice(0, 8).map(h =>
+      '<div class="hist" data-go="/w/' + h.g + '/' + h.dir + '"><img src="' + esc(srcOf(h.thumb || thumbUrl(h.g, h.dir))) + '" data-src="' + esc(h.thumb || thumbUrl(h.g, h.dir)) + '" alt="">' +
+      '<div>' + esc(h.title || (h.g + '/' + h.dir)) + '<div class="k">' + esc(h.g) + '/' + esc(h.dir) + '</div></div></div>').join('') : '');
+  view.querySelectorAll('.hist img').forEach(i => bindImg(i, 'no image'));
+  document.getElementById('open').addEventListener('click', () => {
+    const v = document.getElementById('urlin').value.trim();
+    const m = /(?:g=)?(\d{6,})[\/&\s-]+(?:dir=)?(\d{1,4})/.exec(v);
+    if(m) location.hash = '/w/' + m[1] + '/' + m[2];
+    else if(v) location.hash = '/s/' + encodeURIComponent(v) + '/1/1';
+  });
+  document.getElementById('demo').addEventListener('click', () => { location.hash = '/w/' + DEMO.work.g + '/' + DEMO.work.dir; });
+  view.querySelectorAll('[data-go]').forEach(el => el.addEventListener('click', () => { location.hash = el.dataset.go; }));
+}
+
+/* ---------- 設定 ---------- */
+const WORKER_SRC = `const SITE = 'https://ddd-smart.net';
+const ALLOW = /^https:\\/\\/(ddd-smart\\.net|cdn\\.ddd-smart\\.net|d-hentai\\.net)\\//;
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,OPTIONS',
+  'Access-Control-Allow-Headers': '*'
+};
+
+export default {
+  async fetch(req) {
+    if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+    const u = new URL(req.url);
+    let target = u.searchParams.get('url');
+
+    if (!target) {
+      const g = u.searchParams.get('g'), dir = u.searchParams.get('dir');
+      const page = u.searchParams.get('page');
+      if (g && dir) {
+        target = SITE + '/doujinshi3/show-m.php?g=' + encodeURIComponent(g) +
+                 '&dir=' + encodeURIComponent(dir) + '&page=' + (page || '0');
+      } else if (u.pathname && u.pathname !== '/' && u.pathname !== '//') {
+        target = SITE + u.pathname + u.search;
+      }
+    }
+    if (!target) return new Response('missing url', { status: 400, headers: CORS });
+    if (!ALLOW.test(target)) return new Response('blocked', { status: 403, headers: CORS });
+
+    const r = await fetch(target, {
+      redirect: 'follow',
+      headers: {
+        'Referer': 'https://ddd-smart.net/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+        'Accept': 'text/html,image/*,*/*'
+      }
+    });
+
+    const h = new Headers(r.headers);
+    Object.entries(CORS).forEach(([k, v]) => h.set(k, v));
+    h.set('Cache-Control', 'public, max-age=300');
+
+    const ct = r.headers.get('content-type') || '';
+    if (ct.includes('text/html')) {
+      let b = await r.text();
+      b = b.replace(/<script[\\s\\S]*?<\\/script>/gi, '');
+      b = b.replace(/(href|src)="\\/(?!\\/)([^"]*)"/gi,
+        (m, a, p) => a + '="?url=' + encodeURIComponent(SITE + '/' + p) + '"');
+      h.set('Content-Type', 'text/html; charset=UTF-8');
+      return new Response(b, { status: r.status, headers: h });
+    }
+    return new Response(r.body, { status: r.status, headers: h });
+  }
+};`;
+
+function renderSettings(){
+  const w = S.get('worker', '');
+  view.innerHTML = '<div class="h1">設定</div>' +
+    '<div class="card"><div class="k">プロキシ（Cloudflare Worker URL）</div>' +
+    '<div class="sub"><code>https://</code> は省略可。末尾の <code>/</code> や <code>?url=</code> が付いていても自動で整えます。</div>' +
+    '<input class="txt" id="wurl" placeholder="nlyoshi.xxxx.workers.dev" value="' + esc(w) + '">' +
+    '<div class="row" style="margin-top:8px"><button class="btn primary" id="wsave">保存</button>' +
+    '<button class="btn" id="wtest">接続テスト</button><span id="wres"></span></div></div>' +
+    '<div class="card"><div class="k">Worker コード</div>' +
+    '<div class="sub">広告スクリプト除去とリンク書き換え入り。既にデプロイ済みなら全消しして貼り直し、再デプロイしてください。</div>' +
+    '<textarea class="txt" id="wcode" readonly>' + esc(WORKER_SRC) + '</textarea>' +
+    '<div class="row" style="margin-top:8px"><button class="btn" id="wcopy">コピー</button></div></div>' +
+    '<div class="card"><div class="k">保存データ</div><div class="sub">お気に入り ' + S.get('favs', []).length + ' 件 / 履歴 ' + S.get('hist', []).length + ' 件</div>' +
+    '<div class="row"><button class="btn" id="ch">履歴を消す</button><button class="btn" id="ca">すべて消す</button></div></div>';
+
+  document.getElementById('wsave').addEventListener('click', () => {
+    const n = normWorker(document.getElementById('wurl').value);
+    S.set('worker', n);
+    S.set('meta', {});
+    document.getElementById('wurl').value = n;
+    document.getElementById('wres').innerHTML = '<span class="status ok">保存しました：' + esc(n) + '</span>';
+  });
+  document.getElementById('wtest').addEventListener('click', async () => {
+    const w = normWorker(document.getElementById('wurl').value), res = document.getElementById('wres');
+    if(!w){ res.innerHTML = '<span class="status ng">URL未入力</span>'; return; }
+    res.innerHTML = '<span class="status">テスト中…</span>';
+    try{
+      const r = await fetch(w + '?url=' + encodeURIComponent(SITE + 'search.php?keyword=' + encodeURIComponent('ノア') + '&s=' + encodeURIComponent('検索')));
+      const t = await r.text();
+      res.innerHTML = t.includes('package-list')
+        ? '<span class="status ok">成功（' + t.length.toLocaleString() + '文字）</span>'
+        : '<span class="status ng">中身が違う（' + esc(t.slice(0, 40)) + '）</span>';
+    }catch(e){ res.innerHTML = '<span class="status ng">失敗：' + esc(e.message) + '</span>'; }
+  });
+  document.getElementById('wcopy').addEventListener('click', () => {
+    const ta = document.getElementById('wcode');
+    ta.select();
+    navigator.clipboard.writeText(ta.value).catch(() => document.execCommand('copy'));
+    document.getElementById('wcopy').textContent = 'コピーしました';
+  });
+  document.getElementById('ch').addEventListener('click', () => { S.set('hist', []); renderSettings(); });
+  document.getElementById('ca').addEventListener('click', () => { S.set('favs', []); S.set('hist', []); S.set('prog', {}); S.set('meta', {}); renderSettings(); });
+}
+
+/* ---------- ルーター ---------- */
+function route(){
+  const h = decodeURI(location.hash.slice(1) || '/'), p = h.split('/').filter(Boolean);
+  window.scrollTo(0, 0);
+  if(p[0] === 's' && p[1]) renderSearch(p[1], +(p[2] || 1), +(p[3] || 1));
+  else if(p[0] === 'b' && p[1] && p[2]) renderBrowse(p[1], p[2], +(p[3] || 1), +(p[4] || 1));
+  else if(p[0] === 'w' && p[1] && p[2]) renderReader(p[1], p[2]);
+  else if(p[0] === 'favs') renderList('お気に入り', S.get('favs', []), 'まだ登録がありません。');
+  else if(p[0] === 'hist') renderList('履歴', S.get('hist', []), 'まだ履歴がありません。');
+  else if(p[0] === 'set') renderSettings();
+  else renderHome();
+}
+document.getElementById('sbtn').addEventListener('click', () => {
+  const v = qbox.value.trim();
+  if(v) location.hash = '/s/' + encodeURIComponent(v) + '/1/1';
+});
+qbox.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ const v = qbox.value.trim(); if(v) location.hash = '/s/' + encodeURIComponent(v) + '/1/1'; }
+});
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
